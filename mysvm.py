@@ -1,26 +1,37 @@
 from __future__ import division
 import numpy as np
 import random
-from sklearn.svm import libsvm
-from operator import itemgetter
+from sklearn.svm import SVC
+import operator
 from collections import Counter
+import pylab as plt
+from sklearn.cross_validation import train_test_split
+from sklearn.grid_search import GridSearchCV
+from sklearn.decomposition import PCA
+
+np.random.seed(99)
 
 
 trainfile = open("SGTrain2014.dt", "r")
 testfile = open("SGTest2014.dt", "r")
 
 """
-This function reads in the files, strips by newline and splits by space char. 
+This function reads in the files, strips by newline and splits by comma.
+It shuffles the order of the datapoints before separating the labels (last value) from the features (the rest).  
 It returns the labels as a 1D list and the features as one numpy array per row.
 """
 def read_data(filename):
 	features = np.array([])
 	labels = np.array([])
+	entire = []
 	for l in filename.readlines():
 		l = np.array(l.rstrip('\n').split(','),dtype='float')
-		features = np.append(features, l[:-1])
-		labels = np.append(labels, l[-1])
-	features = np.reshape(features, (-1, len(l)-1))
+		entire.append(l)
+	np.random.shuffle(entire)	
+	for datapoint in entire:
+		features = np.append(features, datapoint[:-1])
+		labels = np.append(labels, datapoint[-1])
+	features = np.reshape(features, (-1, len(datapoint)-1))
 	return features, labels
 
 
@@ -105,22 +116,11 @@ def sfold(features, labels, s):
 
 	#random.shuffle(featurefold, lambda: 0.5) 
 	#random.shuffle(labelfold, lambda: 0.5) #using the same shuffle 
+
 	feature_slices = [featurefold[i::s] for i in xrange(s)]
 	label_slices = [labelfold[i::s] for i in xrange(s)]
 	return label_slices, feature_slices
 
-"""
-This function transforms the test set using the mean and variance from the train set.
-It expects the train and test set and call a function to get mean and variance of the train set.
-It uses these to transform all datapoints of the test set. 
-It returns the transformed test set. 
-
-"""
-def transformtest(trainset, testset):
-	#getting the mean and variance from train:
-	meantrain, variancetrain = mean_variance(trainset)
-	transformed = (testset - meantrain) / np.sqrt(variancetrain)
-	return transformed
 
 
 ##############################################################################
@@ -138,15 +138,15 @@ The lowest test average and the combination that produced it is returned with th
 """
 def crossval(X_train, y_train, folds):
 	# Set the parameters by cross-validation
-	tuned_parameters = [{'gamma': [0.00000000001, 0.0000000001,0.000000001, 0.00000001, 0.0000001, 0.000001,0.00001,0.0001,0.001,0.01,0.1,1],
-                     'C': [0.001,0.01,0.1,1,10,100]}]
+	tuned_parameters = {'gamma': [0.0000001, 0.000001,0.00001,0.0001,0.001,0.01,0.1,1],
+                     'C': [0.001,0.01,0.1,1,10,100]}
 	
 	labels_slices, features_slices = sfold(X_train, y_train, folds)
 	accuracy = []
 
 	#gridsearch
-	for g in tuned_parameters[0]['gamma']:
-		for c in tuned_parameters[0]['C']:
+	for g in tuned_parameters['gamma']:
+		for c in tuned_parameters['C']:
 			temp = []
 			tr_temp = []
 			#crossvalidation
@@ -171,10 +171,13 @@ def crossval(X_train, y_train, folds):
 				crossvaltrain_labels = np.array(crossvaltrain_labels)
 
 				#Classifying using libsvm
-				out = libsvm.fit(crossvaltrain, crossvaltrain_labels, svm_type=0, C=c, gamma=g)
+				clf = SVC(C=c, gamma=g)
+				#clf.fit(crossvaltrain, crossvaltrain_labels)
+				out = libsvm.fit(crossvaltrain, crossvaltrain_labels, C=c, gamma=g)
+				#train_y_pred = clf.predict(crossvaltrain)
+				#y_pred = clf.predict(crossvaltest)
 				train_y_pred = libsvm.predict(crossvaltrain, *out)
 				y_pred = libsvm.predict(crossvaltest, *out)
-
 				#getting the train error count
 				tr_count = 0
 				for l in xrange(len(crossvaltrain_labels)):
@@ -197,36 +200,39 @@ def crossval(X_train, y_train, folds):
 			accuracy.append([c,g,testmean, trainmean])
 
 	#After all C's and gammas have been tried: get the best performance and the hyperparam pairs for that:
-	accuracy.sort(key=itemgetter(2)) #sort by error - lowest first
+	accuracy.sort(key=operator.itemgetter(2)) #sort by error - lowest first
 	bestperf = accuracy[0][-2]
 	besttrain = accuracy[0][-1]
 	bestpair = tuple(accuracy[0][:2])
-	print "\nBest hyperparameter (C, gamma)", bestpair
+	print "\nBest hyperparameter (C, gamma) %s, train error = %.6f, test error = %.6f" %(bestpair, besttrain, bestperf)
 	return bestpair
+
+
+def error(y_pred, y):
+	c = 0
+	for i in xrange(len(y)):
+		if y_pred[i] != y[i]:
+			c += 1
+	return c / len(y)  
 
 """
 This function runs the SVM on the entire data set (training on the train set and evaluating on the testset)
-using the best hyperparameter found from cross validation
+using the best hyperparameter found from cross validation. It expects the hyperparamester as a tuple (C, gamma)
 It returns the train and test error
 """
-def error_svc(X_train, y_train, X_test, y_test):
-	out = libsvm.fit(X_train, y_train, svm_type=0, C=best_hyperparam_norm[0], gamma=best_hyperparam_norm[1])
-	train_y_pred = libsvm.predict(X_train, *out)
-	y_pred = libsvm.predict(X_test, *out)
+def error_svc(X_tr, y_tr, X_te, y_te, best_hyper):
+	clf = SVC(C=best_hyper[0], gamma=best_hyper[1])
+	clf.fit(X_tr, y_tr)
+	#model = libsvm.fit(X_tr, y_tr, C=best_hyper[0], gamma = best_hyper[1])
+	train_y_pred = clf.predict(X_tr)
+	y_pred = clf.predict(X_te)
+	#train_y_pred = libsvm.predict(X_tr, *model)
+	#y_pred = libsvm.predict(X_te, *model)
 
 	#train error
-	c = 0
-	for v in xrange(len(train_y_pred)):
-		if y_train[v] != train_y_pred[v]:
-			c +=1
-	train_error = c / len(train_y_pred)
-
+	train_error = error(train_y_pred, y_tr)
 	#test error
-	counter = 0
-	for y in xrange(len(y_pred)):
-		if y_pred[y] != y_test[y]:
-			counter +=1
-	test_error = counter / len(X_test)
+	test_error = error(y_pred, y_te)
 	return train_error, test_error
 
 # Getting train and test set
@@ -234,50 +240,272 @@ def error_svc(X_train, y_train, X_test, y_test):
 X_train, y_train = read_data(trainfile)
 X_test, y_test = read_data(testfile)
 
-
+#X_train = X_train[::10]
+#y_train = y_train[::10]
 ##############################################################################
 #
 #                      PCA
 #
 ##############################################################################
 
+#Making an array of all training datapoints with label 0
+def getGalaxies(X,y):	
+	Galax = []
+	for i,j in enumerate(y):
+		if j == 0.0:
+			Galax.append(X[i])	
+	return np.array(Galax)
 
-Galaxies = np.array([])
-for d in X_train:
-	if d[-1] == 0:
-		np.append(Galaxies, d)
 
-print Galaxies[:3]
+""" I.2.3 Means.
+We compute the mean via the equation 2.121 pp. 113 Bishop(2010).
+Then we utilize the standard deviation function as to quantify the deviation.
+""" 
+def MaxLike(x,y):
+	MLx = sum(x)*1/len(x)
+	MLy = sum(y)*1/len(y)
+
+	return MLx,MLy
+
+"""
+	Here we create the sample covariance matrix as it is described by Bishop in equation 2.122.
+	To do this we utilize the previously computed sample mean.
+"""
+def MLcov(x,y,ML):
+	assert len(x) == len(y)
+	samples = []
+	nM  = 0
+
+	for i in range(len(x)):
+		samples.append(np.array([x[i],y[i]]).reshape(2,1)) #2 columns, 1 row, i.e. vector plots
+	samples = np.array(samples)
+
+	for i in range(len(x)):
+		n = samples[i]-ML
+		nM += np.dot(n,n.T)
+	CML = (1/len(x))*nM
+
+	return CML
+
+def princomp(galax):
+	res = []
+	temp = []
+	pca = PCA(copy=True)
+	pca.fit(galax)
+	fracofeachattr = pca.explained_variance_ratio_
+
+	x = [1,2,3,4,5,6,7,8,9,10]
+
+	plt.plot(x, fracofeachattr)
+	plt.title("Eigenspectrum")
+	plt.ylabel("Explained variance")
+	plt.xlabel("Attribute")
+	plt.show()
+
+def princomp2(galax):
+	clustermeans = kmeans(galax) #getting 10D clustermeans from the normalized dataset
+	print "*" * 45
+	print "K-means clustering"
+	print "*" * 45
+	print "k = 2"
+	print "Mean of clusters:", clustermeans
+
+	pca2 = PCA(n_components=2)
+	pca2.fit(galax)
+	transformed = pca2.transform(galax)
+
+	plt.title("Data projected on the first two principal components")
+	plt.xlabel("first principal component")
+	plt.ylabel("second principal component")
+	plt.plot([x[0] for x in transformed], [x[1] for x in transformed], 'bx', label = "Galaxies")
+	plt.legend(loc='upper right')
+	plt.show()	
+
+	transformed_mean1 = pca2.transform(clustermeans[0])
+	transformed_mean2 = pca2.transform(clustermeans[1])	
+
+	meanx = [transformed_mean1[0][0], transformed_mean2[0][0]]
+	meany = [transformed_mean1[0][1], transformed_mean2[0][1]]
+
+	plt.title("Data projected on the first two principal components with transformed clustermeans")
+	plt.xlabel("first principal component")
+	plt.ylabel("second principal component")
+	plt.plot([x[0] for x in transformed], [x[1] for x in transformed], 'bx', label = "Galaxies")
+	plt.plot(meanx, meany, 'ro', label = "Cluster means")
+	plt.legend(loc='upper right')
+	plt.show()
+##############################################################################
+#
+#                     K-means
+#
+##############################################################################
+k = 2
+"""
+This function expects a dataset and a list of centers. It calls the euclidean function and
+stores the distance to each center in a list. From that list it gets the index of the minimum value
+and stores the datapoint in a new list of lists at that index.
+It returns the list of lists of the reordered datapoints.
+Then itcalculates the mean for the k lists in the main list.
+It returns a list of lists with the calculated means. 
+"""
+
+def assigning_to_center(dataset, initial):
+	sorted_according_to_center = [[],[]] 
+	assert len(initial) == k
+	
+	for datapoint in dataset:
+		distance = []
+		for i in xrange(len(initial)):
+			d = euclidean(datapoint, initial[i]) 
+			distance.append(d)
+		min_index, min_value = min(enumerate(distance),key=operator.itemgetter(1)) #finding index of min value
+		sorted_according_to_center[min_index].append(datapoint) #...and append in new list at that index
+
+	listofmeans = []
+	for sublist in sorted_according_to_center:
+		submean = sum(sublist) / len(sublist)
+		listofmeans.append(submean)
+	return listofmeans
 
 
+"""
+Here is where everything is put together:
+I have assigned k fixed datapoints to be my initial centers.
+I assign datapoints to them and calculate mean1.
+I assign to this mean and calculates mean1.
+
+Until mean1 and mean2 converge, I continue assigning and calculating new means
+"""
+def kmeans(standardized_data):
+	initial = [standardized_data[98], standardized_data[99]]
+	mean1 = assigning_to_center(standardized_data, initial)
+	mean2 = assigning_to_center(standardized_data, mean1)
+	
+	while not np.array_equal(mean1, mean2):
+		#while len(set(mean1[i]).intersection(mean2[i])) < len(mean1[i]): #as long as they are not identical
+			mean1 = assigning_to_center(standardized_data, mean2)
+			mean2 = assigning_to_center(standardized_data, mean1)
+	return mean1
 
 ##############################################################################
 #
-#                      Calling
+#                      Calling SVM
 #
 ##############################################################################
-
-
-
 
 X_norm = meanfree(X_train)
 X_trans = transformtest(X_train, X_test)
 
-sigma = Jaakkola(X_train, y_train)
-gamma = fromsigmatogamma(sigma)
-print "Jaakkola sigma = ", sigma
-print "Jaakkola gamma = ", gamma
 
-norm_sigma = Jaakkola(X_norm, y_train)
-norm_gamma = fromsigmatogamma(norm_sigma)
-print "Norm sigma", norm_sigma
-print "Norm gamma", norm_gamma
+def run_svc():
+	mean_train, var_train = mean_variance(X_train)
+	print "mean of train set:", mean_train
+	print "Variance train set:", var_train 
+
+	mean_trans, var_trans = mean_variance(X_trans)
+	print "mean of transformed test set:", mean_trans
+	print "Variance of transformed test set:", var_trans
+
+	sigma = Jaakkola(X_train, y_train)
+	gamma = fromsigmatogamma(sigma)
+	print "Jaakkola sigma = ", sigma
+	print "Jaakkola gamma = ", gamma
+
+	norm_sigma = Jaakkola(X_norm, y_train)
+	norm_gamma = fromsigmatogamma(norm_sigma)
+	print "Norm sigma", norm_sigma
+	print "Norm gamma", norm_gamma
+
+	print '*'*45
+	print "Raw"
+	print '*'*45
+	print '-'*45
+	print '5-fold cross validation'
+	print '-'*45
+	print '(C, gamma)'
+	best_hyperparam_raw = crossval(X_train, y_train, 5)
+
+	print '*'*45
+	print "Normalized"
+	print '*'*45
+	print '-'*45
+	print '5-fold cross validation'
+	print '-'*45
+	print 'C, gamma'
+	best_hyperparam_norm = crossval(X_norm, y_train, 5)
+	print best_hyperparam_norm
+
+	tr_error, te_error = error_svc(X_train, y_train, X_test, y_test, best_hyperparam_norm)
+	tr_error_norm, te_error_norm = error_svc(X_norm, y_train, X_trans, y_test, best_hyperparam_norm)
+
+	print "-"*45
+	print "Trained on train set and evaluated on test set"
+	print "-"*45
+	print "Best hyperparameter from normalized: (C, gamma)", best_hyperparam_norm
+	print "Raw: train error= %.4f, test error = %.4f" %(tr_error, te_error)
+	print "Normalized: train error= %.4f, test error = %.4f" %(tr_error_norm, te_error_norm)
+
+#run_svc()
 
 
-#best_hyperparam_raw = crossval(X_train, y_train, 5)
-#best_hyperparam_norm = crossval(X_norm, y_train, 5)
+##############################################################################
+#
+#                      Calling PCA
+#
+##############################################################################
+
+Galaxies = getGalaxies(X_train, y_train)
+Galaxies_norm = meanfree(Galaxies) #normalizing Galaxies to 0 mean uni variance
+
+princomp(Galaxies_norm)
+princomp2(Galaxies_norm)
+
+#Find a way to plot 10D on the 2D plot
+"""
+tuned_parameters = [{'gamma': [0.0000001, 0.000001,0.00001,0.0001,0.001,0.01,0.1,1],
+                     'C': [0.001,0.01,0.1,1,10,100]}]
+	
 
 
+clf = GridSearchCV(SVC(), tuned_parameters, cv=5)
+clf.fit(X_train, y_train)
+
+print "Best parameters set found on development set:"
+print clf.best_estimator_
+
+print"Grid scores on development set:"
+print ""
+for params, mean_score, scores in clf.grid_scores_:
+    print "%0.3f (+/-%0.03f) for %r" % (mean_score, scores.std() / 2, params)
+print ""
 
 
+clf = GridSearchCV(SVC(), tuned_parameters, cv=5)
+clf.fit(X_norm, y_train)
 
+print "Best parameters set found on development set:"
+print clf.best_estimator_
+
+#print"Grid scores on development set:"
+print ""
+#for params, mean_score, scores in clf.grid_scores_:
+#    print "%0.3f (+/-%0.03f) for %r" % (mean_score, scores.std() / 2, params)
+
+best = SVC(C=100, gamma=0.1)
+best.fit(X_train, y_train)
+y_pred_train = best.predict(X_train)
+y_pred = best.predict(X_test)
+
+best.fit(X_norm, y_train)
+y_pred_tr_norm = clf.predict(X_norm)
+y_pred_trans = clf.predict(X_trans)
+
+print "Raw"
+print "Train", error(y_pred_train, y_train)
+print "Test", error(y_pred, y_test)
+
+print "Normalized"
+print "Train", error(y_pred_tr_norm, y_train)
+print "Test", error(y_pred_trans, y_test)
+
+"""
