@@ -4,6 +4,7 @@ import random
 import pylab as plt
 import scipy.optimize as optimize
 from sklearn.linear_model import LinearRegression
+import operator
 from multipolyfit import multipolyfit as mpf
 
 
@@ -31,25 +32,40 @@ clf = LinearRegression()
 clf.fit(X_train, y_train)
 y_pred_Sk = clf.predict(X_test)
 
- 
+
+""" 
+"""
 Create the design matrix from vector X - either for Linear or quadratic basis functions
 - Linear design matrices would look like this: [1, x1, ..., xn]
 - Quadratic design matrices would look like this: (e.g. with 3 variables)
 [1, x1, x2, x3, x1^2, x2^2, x3^2, x1*x2, x1*x3, x2*x3] for each row 
 """
-def createDesignMatrix(X, type="linear"):
+def createDesignMatrix(X, deg, type="linear"):
 	#if type=="linear, create an array of size 1+n, 
-	#else if type=="quadratic", create an array of 1 + n + n + (summation of X0..Xn-1)
+	#else if type=="poly", create an array of 1 + n + n + (summation of X0..Xn-1)
 	l = len(X[0])
 	size = 1 + l
 
-	phi = np.zeros((len(X), size))
+	if (type=="poly"):
+		size += l + (((l-1)*l) / 2)
+	phi = np.zeros((int(len(X)), int(size)))
 
 	#set first column values to 1
 	phi[:,0] = 1 
 
 	for c in range(l):
 		phi[:,c+1] = X[:,c] # phi(x) = x
+
+		if (type=="poly"):
+			phi[:,c+1+l] = X[:,c] ** deg # phi(x) = x**2
+
+	if (type=="poly"):
+		# phi(x) = x1 * x2 ... for (n-1)!
+		j = 0
+		for c in xrange(0, l-1):
+			for i in xrange(c+1, l):
+				phi[:, j+1+l+l] = X[:, c] * X[:, i]
+				j += 1
 
 	return phi
 
@@ -71,8 +87,8 @@ In this function we will use the weight vectors from the training set and use th
 w = weight vectors from the train dataset 
 X_test = the subset of X variables from the test set 
 """
-def predict(w, X_test):
-	phi = createDesignMatrix(X_test) #create design matrix from the test variables
+def predict(w, X_test, deg, phitype):
+	phi = createDesignMatrix(X_test, deg, type=phitype) #create design matrix from the test variables
 	y = np.zeros(len(phi)) # predicted classes
 
 	#summate over all rows in phi and save class vector in y
@@ -88,7 +104,7 @@ This function calculates the Mean Squared Error
 t = actual value from the dataset
 y = predicted value 
 """
-def calculateEMS(t, y):
+def calculateMSE(t, y):
 	N = len(t)
 	sum = 0
 	for n in range(N):
@@ -96,15 +112,27 @@ def calculateEMS(t, y):
 	MSE = sum/N
 	return MSE
 
-phi = createDesignMatrix(X_train)
-bias = findML(phi, y_train)
-print "Bias:", bias
-y_pred_train = predict(bias, X_train)
-y_pred = predict(bias, X_test)
-EMS_train = calculateEMS(y_train, y_pred_train)
-EMS_test = calculateEMS(y_test, y_pred)
-print "EMS Trains", EMS_train
-print "EMS Test", EMS_test
+""" This function computes the mean and covariance using maximum aposteriori. """
+def computeBayesianMeanAndCovariance(X, t, alpha, deg):
+	beta = 1
+	#get design matrix
+	phi = createDesignMatrix(X, deg, type="poly")
+
+	#get second part of covariance matrix
+	bpp = beta * np.dot(phi.T, phi)
+
+	#get first part of covariance matrix
+	aI = np.zeros(bpp.shape)
+	np.fill_diagonal(aI, alpha) #alpha * I
+
+	covariance = aI + bpp
+ 	
+ 	#get each part of the mean equation
+ 	bs = beta * np.linalg.pinv(covariance)
+ 	mean = np.dot(bs, np.dot(phi.T, t))
+ 	mean = mean.reshape(-1,len(mean))[0]
+
+ 	return mean, covariance  
 
 """
 This function splits the shuffled train set in s equal sized splits. 
@@ -120,6 +148,21 @@ def sfold(features, labels, s):
 	label_slices = [labelfold[i::s] for i in xrange(s)]
 	return label_slices, feature_slices
 
+print "*"*45
+print "Linear regression"
+print "*"*45
+
+phi = createDesignMatrix(X_train, 1, type="linear")
+weights = findML(phi, y_train)
+print "Bias:", weights[0]
+y_pred_train = predict(weights, X_train, 1, "Linear")
+y_pred = predict(weights, X_test, 1, "Linear")
+MSE_train = calculateMSE(y_train, y_pred_train)
+MSE_test = calculateMSE(y_test, y_pred)
+print "MSE Trains", MSE_train
+print "MSE Test", MSE_test
+
+
 ##############################################################################
 #
 #                    	Polynomial regression
@@ -130,15 +173,94 @@ print "*"*45
 print "Polynomial regression"
 print "*"*45
 
+def alpha_deg_gridsearch(X_tr, y_tr, X_te, y_te):
+	folds = 5
+	alphas = np.arange(0, 50, 1)
+	degrees = [1,2,3,4]
+	results = []
+	labels_slices, features_slices = sfold(X_train, y_train, folds)
+	for deg in degrees: 
+		for alpha in alphas:
+			te_temp = 0
+			tr_temp = 0
+			#crossvalidation
+			for f in xrange(folds):
+				crossvaltrain = []
+				crossvaltrain_labels = []
+
+				#define test-set for this run
+				crossvaltest = np.array(features_slices[f])
+				crossvaltest_labels = np.array(labels_slices[f])
+				
+				#define train set for this run
+				for i in xrange(folds): #putting content of remaining slices in the train set 
+					if i != f: # - if it is not the test slice: 
+						for elem in features_slices[i]:
+							crossvaltrain.append(elem) #making a list of trainset for this run
+							
+						for lab in labels_slices[i]:
+							crossvaltrain_labels.append(lab) #...and a list of adjacent labels
+				
+				crossvaltrain = np.array(crossvaltrain)
+				crossvaltrain_labels = np.array(crossvaltrain_labels)
+
+				Mean, Covariance = computeBayesianMeanAndCovariance(crossvaltrain, crossvaltrain_labels, alpha, deg)
+				y_pred = predict(Mean, crossvaltest, deg, "poly")
+				y_pred_tr = predict(Mean, crossvaltrain, deg, "poly")
+
+				#calculate Root Mean Square (RMS) for each variable selection
+				MSE_tr = calculateMSE(y_pred_train, y_tr)
+				MSE_te = calculateMSE(y_pred, y_te)
+				
+				tr_temp += MSE_tr
+				te_temp += MSE_te
+			tr_temp = tr_temp / folds
+			te_temp = te_temp /folds
+			print "Degree = %s, alpha = %s,  av. train EMS = %.6f, av. test EMS = %.6f" %(deg, alpha, tr_temp, te_temp)
+			results.append([tr_temp, te_temp, (deg, alpha)])
+	print results
+	print results[0]
+	resultsort = results.sort(key=operator.itemgetter(0)) #sort by test EMS - lowest first
+	bestalpha_deg = resultsort[0][-1]
+	train_MSE = resultsort[0][0]
+	test_MSE = resultsort[0][1]
+	print "Best (degree, alpha): %s, train EMS = %.6f, test EMS = %.6f " %(bestalpha_deg, train_EMS, test_EMS)
+	return bestdeg_alpha
+
+print "-"
+print "Gridsearch to find best degree and alpha"
+print "-"
+
+deg_alpha = alpha_deg_gridsearch(X_train, y_train, X_test, y_test) 
+
+Mean, Covariance = computeBayesianMeanAndCovariance(X_train, y_train, deg_alpha[0], deg_alpha[1])
+y_pred_tr = predict(Mean, X_train)
+y_pred = predict(Mean, X_test)
+MSE_tr = calculateMSE(y_pred_tr, y_train)
+MSE_te = calculateMSE(y_pred, y_test)
+print "Trained on train set and evaluated on test set with best hyperparameter pair (degree, alpha), %s. Train MSE = %.6f. Test MSE = %.6f" %(deg_alpha, MSE_tr, MSE_te)
+
+"""
 #Regression
-coeffs = mpf(X_train, y_train,model_out=False, deg=2)
+degrees = [1,2,3,4,5]
+for deg in degrees: 
+	model = mpf(X_train, y_train, deg=deg, model_out=True)
+	beta, powers = mpf(X_train, y_train, deg=deg, powers_out=True)
 
-print coeffs
-y2_train = np.polyval(coeffs, y_train) #Evaluates the polynomial
-y2_test = np.polyval(coeffs, y_test) #Evaluates the polynomial
+	y_pred = []
+	for d in X_test:
+		y = model(d[0],d[1],d[2],d[3])
+		y_pred.append(y)
+	y_pred = np.array(y_pred)
 
-#Getting EMS
-EMS_train = calculateEMS(y2_train, y_train)
-EMS_test = calculateEMS(y2_test, y_test)
-print "EMS Train", EMS_train
-print "EMS Test", EMS_test
+	y_pred_train = []
+	for d in X_train:
+		y = model(d[0],d[1],d[2],d[3])
+		y_pred_train.append(y)
+	y_pred_train = np.array(y_pred_train)
+
+	MSE_train = calculateMSE(y_pred_train, y_train)
+	MSE_test = calculateMSE(y_pred, y_test)
+	print "Degree: %s, Train MSE = %.6f, Test MSE = %.6f" %(deg, MSE_train, MSE_test)
+"""
+

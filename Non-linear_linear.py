@@ -3,11 +3,13 @@ import numpy as np
 import pylab as plt
 from operator import itemgetter
 from collections import Counter
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.lda import LDA
 
 trainfile = open("VSTrain2014.dt", "r")
 testfile = open("VSTest2014.dt", "r")
 
-k = 1
+np.random.seed(99)
 """
 This function reads in the files, strips by newline and splits by comma.
 It shuffles the order of the datapoints before returning the dataset with the class label as the last value of each datapoint
@@ -19,9 +21,12 @@ def read_data(filename):
 	for l in filename.readlines():
 		l = np.array(l.rstrip('\n').split(','),dtype='float')
 		entire.append(l)
-	np.random.shuffle(entire)	
-	features = np.reshape(entire, (-1, len(entire[0])))
-	return entire
+	np.random.shuffle(entire)
+	for datapoint in entire:
+		features = np.append(features, datapoint[:-1])
+		labels = np.append(labels, datapoint[-1])
+	features = np.reshape(features, (-1, len(datapoint)-1))
+	return features, labels
 
 
 ##############################################################################
@@ -30,120 +35,174 @@ def read_data(filename):
 #
 ##############################################################################
 
-def euclidean(ex1,ex2):
-	"""
-	This function takes two datapoints and calculates the euclidean distance between them.
-	It expects two data points without class label 
-	"""
-	assert len(ex1) == len(ex2)
-	inner = 0
-	for i in xrange(len(ex1)):
-		inner += (ex1[i] - ex2[i])**2 
-	distance = np.sqrt(inner)
-	return distance
-
-def NearestNeighbor(tr,ex0):
-	"""
-  	This function expects a dataset and a datapoint. 
-  	It calls the euclidean and stores the distances to the solo datapoint of all datapoints in the dataset. These are stores in a list of lists. 
-  	This lists are sorted according to distances and K-nearest datapoints are returned 
-	"""
-	distances = []
-
-	#distances.append(ex0)
-	for ex in tr:
-		curr_dist = euclidean(ex,ex0) 
-		distances.append([curr_dist,ex])
-
-	distances.sort(key=itemgetter(0))
-	KNN = distances[:k] #taking only the k-best matches
-	return KNN
-
-
 """
+This function gets the prior probability of each class
+"""
+def prior(y_train):
+	sort = []
+	count = Counter(y_train)
+	c = 0.0
+	for i in xrange(len(count)):
+		sort.append(count[c] / len(y_train))
+		c += 1.0
+	sort = np.array(sort)
+	return sort
+"""
+This function multiplies the prior probability with the predicted probability. 
+
+def probawithprior(pred, proba):
+	for i in xrange(len(proba)):
+		pred[i] = pred[i] * proba[i]
+	return pred
+
+def one_vs_all_prep(y):
+	newlabels = []
+	for i in set(y):
+		inner = []
+		for label in y:
+			if label == i:
+				label = 1
+			else:
+				label = 0
+			inner.append(label)
+		newlabels.append(inner)
+	return np.reshape(np.array(newlabels),(-1,(len(y))))
+
+def one_vs_all_(X_train, y_train, X_test, y_test, k):
+	newlabels = one_vs_all_prep(y_train)
+	neigh = KNeighborsClassifier(n_neighbors=k)
+	for i in xrange(len(newlabels):
+		neigh.fit(X_train, newlabels[i])
+		proba = neigh.proba(X_test, )  
+
 This function calls KNN functions. I gets array of KNN from NearestNeighbor-function. 
 Most frequent class is counted. 
 1-0 loss and accuracy is calculated for train and test using counters. 
 For the train accuracy I train on train and use datapoints from the same set.
 For the test acc I train on train and use datapoints from test. 
 """	
-def eval(train, test):
+def eval_knn(X_train, y_train, X_test, y_test, k):
 	wrongtrain=0
 	wrongtest=0
 	#train set
-	for ex in train:
-		ex_prime=NearestNeighbor(train,ex)
-		knn =[]
-		for elem in ex_prime:
-			knn.append(elem[-1][-1]) #that's the class
-			result = Counter(knn) #result is a list of the k-nearest classes
-		bestresult = result.most_common(1) #majority vote
-		if bestresult[0][0] != ex[-1]:
+	neigh = KNeighborsClassifier(n_neighbors=k)
+	neigh.fit(X_train, y_train)
+	y_pred_train = neigh.predict(X_train)
+	y_pred = neigh.predict(X_test)
+	#y_pred_train = probawithprior(neigh.predict_proba(X_train), prior)
+	#y_pred = probawithprior(neigh.predict_proba(X_test), prior)
+	
+	for y in xrange(len(y_pred_train)):	
+		if y_pred_train[y] != y_train[y]:
+		#max_index = np.argmax(y_pred_train[y])
+		#if float(max_index) != y_train[y]:
 			wrongtrain +=1
 
-	#test set		
-	for ex in test:
-		ex_prime=NearestNeighbor(train,ex)
-		knn =[]
-		for elem in ex_prime:
-			knn.append(elem[-1][-1]) #that's the class
-			result = Counter(knn)
-		result = result.most_common(1)
-		if result[0][0] != ex[-1]:
+	for y in xrange(len(y_pred)):	
+		#max_index_ = np.argmax(y_pred[y])
+		#if float(max_index_) != y_test[y]:
+		if y_pred[y] != y_test[y]:
 			wrongtest +=1
-	return wrongtrain/len(train), wrongtest/len(test)
+	return wrongtrain/len(y_train), wrongtest/len(y_test)
 
 """
-This function splits the shuffled train set in s equal sized splits. The lambda constant makes sure that it's always shuffled the same way 
-It returns a list of s slices containg lists of datapoints.
-"""
-def sfold(data,s):
-	slices = [data[i::s] for i in xrange(s)]
-	return slices
+This function calls LDA functions. 
+1-0 loss and accuracy is calculated for train and test using counters. 
+For the train accuracy I train on train and use datapoints from the same set.
+For the test acc I train on train and use datapoints from test. 
+"""	
+def eval_lda(X_train, y_train, X_test, y_test):
+	wrongtrain=0
+	wrongtest=0
+	#train set
+	pri = prior(y_train)
+	#clf = LDA(priors=pri)
+	clf = LDA()
+	clf.fit(X_train, y_train)
+	y_pred_train = clf.predict(X_train)
+	y_pred = clf.predict(X_test)
+	
+	for y in xrange(len(y_pred_train)):	
+		if y_pred_train[y] != y_train[y]:
+			wrongtrain +=1
+
+	for y in xrange(len(y_pred)):	
+		if y_pred[y] != y_test[y]:
+			wrongtest +=1
+	return wrongtrain/len(y_train), wrongtest/len(y_test)
 
 
 """
-After having decorated, this function gets a slice for testing and uses the rest for training.
-First we choose test-set - that's easy.
-Then for every test-set for as many folds as there are: use the remaining as train sets exept if it's the test set. 
-Then we sum up the result for every run and average over them and print the result.  
+This function splits the shuffled train set in s equal sized splits. 
+It expects the features, the labels and number of slices. 
+It starts by making a copy of the labels and features and shuffles them. The lambda constant makes sure that it's always shuffled the same way 
+It returns a list of s slices containg lists of datapoints belonging to s.
 """
-def crossval(trainset, folds):
-	print '*'*45
-	print '%d-fold cross validation' %folds
-	print '*'*45
-	cross_result = []
-	slices = sfold(trainset,folds)
+def sfold(features, labels, s):
+	featurefold = np.copy(features)
+	labelfold = np.copy(labels)
+
+	feature_slices = [featurefold[i::s] for i in xrange(s)]
+	label_slices = [labelfold[i::s] for i in xrange(s)]
+	return label_slices, feature_slices
+
+
+"""
+The function expects a train set, a 1D list of train labels and number of folds. 
+The function has dicts of all C's and gammas. For each combination it runs 5 fold crossvalidation: 
+For every test-set for as many folds as there are: use the remaining as train sets (exept if it's the test set.) 
+Then we sum up the test and train result for every run and average it. The average performances per combination is stored.
+The lowest test average and the combination that produced it is returned with the train error rate.   
+"""
+def crossval(X_train, y_train, folds, function="KNN"):
+
+	# Hyperparams: K
 	Kcrossval = [1,3,5,7,9,11,13,15,17,21,25]
-
-	for k in Kcrossval:
-		print "Number of neighbors \t%d" %k
-		temp = []
-		temp = 0
-		temptrain = 0
+	print function
+	labels_slices, features_slices = sfold(X_train, y_train, folds)
+	cross_result = []
+	for k in Kcrossval:	
+				
+		test_error = 0
+		train_error = 0		
+		#crossvalidation
 		for f in xrange(folds):
-			crossvaltest = slices[f]
-			crossvaltrain =[]
-			
-			for i in xrange(folds):
-				if i != f: 
-					for elem in slices[i]:
-						crossvaltrain.append(elem) #making a new list of crossvaltrains
-			acctrain, acctest = eval(crossvaltrain,crossvaltest)
-			temp += acctest	
-			temptrain += acctrain
-		av_tr_result = temptrain / folds
-		av_result = temp/folds
-		print "Averaged 0-1 loss \t%1.4f" %av_result
-		print "-"*45
-		temp.append(k, av_tr_result, av_result)
-		cross_result.append(temp)
-	cross_result.sort(key=itemgetter(-1))
-	bestk = cross_result[0][0]
-	bestacc = cross_result[0][-1]
-	bestrain = cross_result[0][1]
-	print "Best k = %s. Test error = %.4f. Train error = %.4f" %(bestk, bestacc, besttrain)
+			crossvaltrain = []
+			crossvaltrain_labels = []
 
+			#define test-set for this run
+			crossvaltest = np.array(features_slices[f])
+			crossvaltest_labels = np.array(labels_slices[f])
+			
+			#define train set for this run
+			for i in xrange(folds): #putting content of remaining slices in the train set 
+				if i != f: # - if it is not the test slice: 
+					for elem in features_slices[i]:
+							crossvaltrain.append(elem) #making a list of trainset for this run
+							
+					for lab in labels_slices[i]:
+						crossvaltrain_labels.append(lab) #...and a list of adjacent labels
+				
+			crossvaltrain = np.array(crossvaltrain)
+			crossvaltrain_labels = np.array(crossvaltrain_labels)
+			if function == "KNN":
+				acctrain, acctest = eval_knn(crossvaltrain, crossvaltrain_labels, crossvaltest, crossvaltest_labels, k)
+			elif function == "LDA":
+				pass
+			train_error += acctrain
+			test_error += acctest
+		av_tr_error = train_error / folds
+		av_te_error = test_error / folds
+		print "Average 0-1 loss for k = %s: %.6f"%(k, av_te_error)
+
+		cross_result.append([k, av_tr_error, av_te_error])
+
+	cross_result.sort(key=itemgetter(-1)) #sort by error - lowest first
+	bestperf = cross_result[0][-1]
+	besttrain = cross_result[0][-2]
+	bestk = cross_result[0][0]
+	print "\nBest k %s, train error = %.6f, test error = %.6f" %(bestk, besttrain, bestperf)
+	return bestk
 
 
 ########################################################################################
@@ -158,25 +217,9 @@ This function takes a dataset and computes the mean and the variance of each inp
 It returns two lists: [mean of first feature, mean of second feature] [variance of first feature, variance of second feature]
 """
 def mean_variance(data):
-	Mean = []
-	Variance = []
-	number_of_features = len(data[0]) - 1 #Leaving out the class
-	for i in xrange(number_of_features): 
-		s = 0
-		su = 0
-
-		#mean
-		for elem in data:
-			s +=elem[i]
-		mean = s / len(data)
-		Mean.append(mean)
-		
-		#variance:
-		for elem in data:
-			su += (elem[i] - Mean[i])**2
-			variance = su/len(data)	
-		Variance.append(variance)
-	return Mean, Variance
+	mean = sum(data) / len(data)
+	variance = sum((data - mean)**2) / len(data)
+	return mean, variance
 
 
 """
@@ -186,40 +229,49 @@ A copy of the data is created.
 The normalized values are inserted at the old index in the copy thus preserving class label 
 The new, standardized data set is returned
 """
-def meanfree(data):
-	number_of_features = len(data[0]) - 1 #Leaving out the class
-
+def meanfree(data):	
 	mean, variance = mean_variance(data)
-	print "Mean", mean
-	print "Variance", variance
-
-	new = np.copy(data)
-
-	for num in xrange(number_of_features):
-		for i in xrange(len(data)):
-			#replacing at correct index in the copy
-			new[i][num] = (data[i][num] - mean[num]) / np.sqrt(variance[num])
-	return new
+	meanfree = (data - mean) / np.sqrt(variance)
+	return meanfree
 
 def transformtest(trainset, testset):
 	#getting the mean and variance from train:
 	meantrain, variancetrain = mean_variance(trainset)
+	transformed = (testset - meantrain) / np.sqrt(variancetrain)
+	return transformed
 
-	number_of_features = len(trainset[0]) - 1 #Leaving out the class
 
-	newtest = np.copy(testset)
 
-	for num in xrange(number_of_features):
-		for i in xrange(len(testset)):
-			#replacing at correct index in the copy
-			newtest[i][num] = (testset[i][num] - meantrain[num]) / np.sqrt(variancetrain[num])
-	return newtest
+X_train, y_train = read_data(trainfile)
+X_test, y_test = read_data(testfile)
 
-trainset = read_data(trainfile)
-testset = read_data(testfile)
+X_norm = meanfree(X_train)
+X_trans = transformtest(X_train, X_test)
 
-trainerror, testerror = eval(trainset, testset)
+train_mean, train_var = mean_variance(X_train)
+print "Mean of raw trainset", train_mean
+print "Variance of raw trainset", train_var
 
-print trainerror
-print testerror
+trans_mean, trans_var = mean_variance(X_trans)
+print "Mean for transformed testset", trans_mean
+print "Variance of transformed testset", trans_var
+
+print '*'*45
+print 'Raw 5-fold cross validation'
+print '*'*45
+bestk = crossval(X_train, y_train, 5)
+
+print '*'*45
+print 'Normalized 5-fold cross validation'
+print '*'*45
+bestk_norm = crossval(X_norm, y_train,5)
+
+trainerr, testerr = eval_knn(X_norm, y_train, X_trans, y_test, bestk_norm)
+print "Trained on training set and evaluated on test set with best-k: %s. Train error = %.4f, test error = %.4f" %(bestk_norm, trainerr, testerr)
+
+print '*'*45
+print 'Raw LDA'
+print '*'*45
+trainerr, testerr = eval_lda(X_train, y_train, X_test, y_test,)
+print "Trained on train set and evaluated on test set. Train error = %.4f, test error = %.4f" %(trainerr, testerr)
 

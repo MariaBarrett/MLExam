@@ -9,6 +9,7 @@ from sklearn.cross_validation import train_test_split
 from sklearn.grid_search import GridSearchCV
 from sklearn.decomposition import PCA
 
+
 np.random.seed(99)
 
 
@@ -94,7 +95,7 @@ def Jaakkola(X, y):
 		for j,k in enumerate(y):
 			if n != k: #if not the same class:
 				eu = euclidean(X[i], X[j])
-				temp.append(eu) #temp is a list of eucidean distances
+				temp.append(eu) #temp is a list of eucidean distances between other-class datapoints
 		temp = sorted(temp)
 		G.append(temp[0]) #appending smallest euclidean distance
 	sigma = np.median(np.array(G))
@@ -113,9 +114,6 @@ It returns a list of s slices containg lists of datapoints belonging to s.
 def sfold(features, labels, s):
 	featurefold = np.copy(features)
 	labelfold = np.copy(labels)
-
-	#random.shuffle(featurefold, lambda: 0.5) 
-	#random.shuffle(labelfold, lambda: 0.5) #using the same shuffle 
 
 	feature_slices = [featurefold[i::s] for i in xrange(s)]
 	label_slices = [labelfold[i::s] for i in xrange(s)]
@@ -170,14 +168,12 @@ def crossval(X_train, y_train, folds):
 				crossvaltrain = np.array(crossvaltrain)
 				crossvaltrain_labels = np.array(crossvaltrain_labels)
 
-				#Classifying using libsvm
+				#Classifying using library function
 				clf = SVC(C=c, gamma=g)
-				#clf.fit(crossvaltrain, crossvaltrain_labels)
-				out = libsvm.fit(crossvaltrain, crossvaltrain_labels, C=c, gamma=g)
-				#train_y_pred = clf.predict(crossvaltrain)
-				#y_pred = clf.predict(crossvaltest)
-				train_y_pred = libsvm.predict(crossvaltrain, *out)
-				y_pred = libsvm.predict(crossvaltest, *out)
+				clf.fit(crossvaltrain, crossvaltrain_labels)
+				train_y_pred = clf.predict(crossvaltrain)
+				y_pred = clf.predict(crossvaltest)
+				
 				#getting the train error count
 				tr_count = 0
 				for l in xrange(len(crossvaltrain_labels)):
@@ -257,53 +253,25 @@ def getGalaxies(X,y):
 	return np.array(Galax)
 
 
-""" I.2.3 Means.
-We compute the mean via the equation 2.121 pp. 113 Bishop(2010).
-Then we utilize the standard deviation function as to quantify the deviation.
-""" 
-def MaxLike(x,y):
-	MLx = sum(x)*1/len(x)
-	MLy = sum(y)*1/len(y)
-
-	return MLx,MLy
-
-"""
-	Here we create the sample covariance matrix as it is described by Bishop in equation 2.122.
-	To do this we utilize the previously computed sample mean.
-"""
-def MLcov(x,y,ML):
-	assert len(x) == len(y)
-	samples = []
-	nM  = 0
-
-	for i in range(len(x)):
-		samples.append(np.array([x[i],y[i]]).reshape(2,1)) #2 columns, 1 row, i.e. vector plots
-	samples = np.array(samples)
-
-	for i in range(len(x)):
-		n = samples[i]-ML
-		nM += np.dot(n,n.T)
-	CML = (1/len(x))*nM
-
-	return CML
-
 def princomp(galax):
-	res = []
-	temp = []
 	pca = PCA(copy=True)
-	pca.fit(galax)
-	fracofeachattr = pca.explained_variance_ratio_
+	transformed = pca.fit_transform(galax)
+	components = pca.components_
 
-	x = [1,2,3,4,5,6,7,8,9,10]
+	M = (galax-np.mean(galax.T,axis=1)).T # subtract the mean (along columns)
+ 	eigv, eigw = np.linalg.eig(np.cov(M)) 
 
-	plt.plot(x, fracofeachattr)
+ 	print np.cov(M)
+ 	x = [1,2,3,4,5,6,7,8,9,10]
+
+	plt.plot(x, eigv)
 	plt.title("Eigenspectrum")
-	plt.ylabel("Explained variance")
-	plt.xlabel("Attribute")
+	plt.ylabel("Eigenvalue")
+	plt.xlabel("Components")
 	plt.show()
 
 def princomp2(galax):
-	clustermeans = kmeans(galax) #getting 10D clustermeans from the normalized dataset
+	clustermeans = mykmeans(galax) #getting 10D clustermeans from the normalized dataset
 	print "*" * 45
 	print "K-means clustering"
 	print "*" * 45
@@ -376,7 +344,7 @@ I assign to this mean and calculates mean1.
 
 Until mean1 and mean2 converge, I continue assigning and calculating new means
 """
-def kmeans(standardized_data):
+def mykmeans(standardized_data):
 	initial = [standardized_data[98], standardized_data[99]]
 	mean1 = assigning_to_center(standardized_data, initial)
 	mean2 = assigning_to_center(standardized_data, mean1)

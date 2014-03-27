@@ -1,0 +1,134 @@
+mean of train set: [ 20.8657276   19.72533012  18.81956725  18.30717982  18.02197648
+  21.9042046   20.51709077  19.59998891  19.09916094  18.7724104 ]
+Variance train set: [ 4.63592926  3.97809882  3.19470814  2.78372374  2.69531361  4.36835736
+  3.87808521  2.82418437  2.33364502  2.18703413]
+mean of transformed test set: [ 0.01074545  0.0206219  -0.0002215  -0.01225596 -0.01644997  0.02820922
+  0.02685182  0.01049796 -0.00458587 -0.01253641]
+Variance of transformed test set: [ 0.97700766  0.99871072  0.97074369  0.9398434   0.95262477  0.96920857
+  1.00542338  0.99345096  0.96817511  0.95785024]
+Jaakkola sigma =  1.81188376031
+Jaakkola gamma =  0.1523033091
+Norm sigma 1.01805438506
+Norm gamma 0.482423046115
+*********************************************
+Raw
+*********************************************
+---------------------------------------------
+5-fold cross validation
+---------------------------------------------
+(C, gamma)
+Average test error of (0.001, 1e-07): 0.383667
+Average test error of (0.01, 1e-07): 0.383667
+Average test error of (0.1, 1e-07): 0.383667
+Average test error of (1, 1e-07): 0.383667
+Average test error of (10, 1e-07): 0.383667
+Average test error of (100, 1e-07): 0.383667
+Average test error of (0.001, 1e-06): 0.383667
+Average test error of (0.01, 1e-06): 0.383667
+Average test error of (0.1, 1e-06): 0.383667
+Average test error of (1, 1e-06): 0.383667
+Average test error of (10, 1e-06): 0.383667
+Average test error of (100, 1e-06): 0.094333
+Average test error of (0.001, 1e-05): 0.383667
+Average test error of (0.01, 1e-05): 0.383667
+Average test error of (0.1, 1e-05): 0.383667
+Average test error of (1, 1e-05): 0.383667
+Average test error of (10, 1e-05): 0.094667
+Average test error of (100, 1e-05): 0.043333
+Average test error of (0.001, 0.0001): 0.383667
+Average test error of (0.01, 0.0001): 0.383667
+Average test error of (0.1, 0.0001): 0.383667
+Average test error of (1, 0.0001): 0.094667
+Average test error of (10, 0.0001): 0.043000
+Average test error of (100, 0.0001): 0.013667
+Average test error of (0.001, 0.001): 0.383667
+Average test error of (0.01, 0.001): 0.383667
+Average test error of (0.1, 0.001): 0.094000
+Average test error of (1, 0.001): 0.042000
+Average test error of (10, 0.001): 0.014000
+Average test error of (100, 0.001): 0.007333
+Average test error of (0.001, 0.01): 0.383667
+Average test error of (0.01, 0.01): 0.239667
+Average test error of (0.1, 0.01): 0.044333
+Average test error of (1, 0.01): 0.016000
+Average test error of (10, 0.01): 0.007333
+Average test error of (100, 0.01): 0.005667
+Average test error of (0.001, 0.1): 0.383667
+Average test error of (0.01, 0.1): 0.078000
+Average test error of (0.1, 0.1): 0.026000
+Average test error of (1, 0.1): 0.013667
+Average test error of (10, 0.1): 0.010000
+Average test error of (100, 0.1): 0.009667
+Average test error of (0.001, 1): 0.383667
+Average test error of (0.01, 1): 0.383667
+Average test error of (0.1, 1): 0.098000
+Average test error of (1, 1): 0.023667
+Average test error of (10, 1): 0.023000
+Average test error of (100, 1): 0.023000
+
+Best hyperparameter (C, gamma) (100, 0.01), train error = 0.002750, test error = 0.005667
+*********************************************
+Normalized
+*********************************************
+---------------------------------------------
+5-fold cross validation
+---------------------------------------------
+C, gamma
+Average test error of (0.001, 1e-07): 0.383667
+Average test error of (0.01, 1e-07): 0.383667
+Average test error of (0.1, 1e-07): 0.383667
+Average test error of (1, 1e-07): 0.383667
+Average test error of (10, 1e-07): 0.383667
+Average test error of (100, 1e-07): 0.383667
+Average test error of (0.001, 1e-06): 0.383667
+Average test error of (0.01, 1e-06): 0.383667
+Average test error of (0.1, 1e-06): 0.383667
+Average test error of (1, 1e-06): 0.383667
+Average test error of (10, 1e-06): 0.383667
+Average test error of (100, 1e-06): 0.383667
+Average test error of (0.001, 1e-05): 0.383667
+Average test error of (0.01, 1e-05): 0.383667
+Average test error of (0.1, 1e-05): 0.383667
+Average test error of (1, 1e-05): 0.383667
+Average test error of (10, 1e-05): 0.383667
+Average test error of (100, 1e-05): 0.058333
+Average test error of (0.001, 0.0001): 0.383667
+Average test error of (0.01, 0.0001): 0.383667
+Average test error of (0.1, 0.0001): 0.383667
+Average test error of (1, 0.0001): 0.383667
+Average test error of (10, 0.0001): 0.058333
+Average test error of (100, 0.0001): 0.020000
+Average test error of (0.001, 0.001): 0.383667
+Average test error of (0.01, 0.001): 0.383667
+Average test error of (0.1, 0.001): 0.383667
+Average test error of (1, 0.001): 0.056333
+Average test error of (10, 0.001): 0.022000
+Average test error of (100, 0.001): 0.010333
+Average test error of (0.001, 0.01): 0.383667
+Average test error of (0.01, 0.01): 0.383667
+Average test error of (0.1, 0.01): 0.055000
+Average test error of (1, 0.01): 0.025000
+Average test error of (10, 0.01): 0.007667
+Average test error of (100, 0.01): 0.005333
+Average test error of (0.001, 0.1): 0.383667
+Average test error of (0.01, 0.1): 0.077667
+Average test error of (0.1, 0.1): 0.026667
+Average test error of (1, 0.1): 0.011333
+Average test error of (10, 0.1): 0.007000
+Average test error of (100, 0.1): 0.007000
+Average test error of (0.001, 1): 0.383667
+Average test error of (0.01, 1): 0.160667
+Average test error of (0.1, 1): 0.025333
+Average test error of (1, 1): 0.013333
+Average test error of (10, 1): 0.011667
+Average test error of (100, 1): 0.011333
+
+Best hyperparameter (C, gamma) (100, 0.01), train error = 0.004250, test error = 0.005333
+(100, 0.01)
+---------------------------------------------
+Trained on train set and evaluated on test set
+---------------------------------------------
+Best hyperparameter from normalized: (C, gamma) (100, 0.01)
+Raw: train error= 0.0023, test error = 0.0060
+Normalized: train error= 0.0047, test error = 0.0040
+
