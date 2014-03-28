@@ -8,7 +8,8 @@ import pylab as plt
 from sklearn.cross_validation import train_test_split
 from sklearn.grid_search import GridSearchCV
 from sklearn.decomposition import PCA
-
+from sklearn.lda import LDA
+from sklearn.neighbors import KNeighborsClassifier
 
 np.random.seed(99)
 
@@ -427,6 +428,7 @@ Galaxies_norm = meanfree(Galaxies) #normalizing Galaxies to 0 mean uni variance
 
 princomp(Galaxies_norm)
 princomp2(Galaxies_norm)
+
 
 #Find a way to plot 10D on the 2D plot
 """

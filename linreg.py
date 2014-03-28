@@ -10,7 +10,7 @@ from multipolyfit import multipolyfit as mpf
 
 trainfile = open("SSFRTrain2014.dt", "r")
 testfile = open("SSFRTest2014.dt", "r")
-
+np.random.seed(1)
 """
 This function reads in the files, strips by newline and splits by space char. 
 It returns the labels as a 1D list and the features as one numpy array per row.
@@ -18,11 +18,15 @@ It returns the labels as a 1D list and the features as one numpy array per row.
 def read_data(filename):
 	features = np.array([])
 	labels = np.array([])
+	entire = []
 	for l in filename.readlines():
 		l = np.array(l.rstrip('\n').split(),dtype='float')
-		features = np.append(features, l[:-1])
-		labels = np.append(labels, l[-1])
-	features = np.reshape(features, (-1, len(l)-1))
+		entire.append(l)
+	np.random.shuffle(entire)	
+	for datapoint in entire:
+		features = np.append(features, datapoint[:-1])
+		labels = np.append(labels, datapoint[-1])
+	features = np.reshape(features, (-1, len(datapoint)-1))
 	return features, labels
 
 X_train, y_train = read_data(trainfile)
@@ -33,8 +37,6 @@ clf.fit(X_train, y_train)
 y_pred_Sk = clf.predict(X_test)
 
 
-""" 
-"""
 Create the design matrix from vector X - either for Linear or quadratic basis functions
 - Linear design matrices would look like this: [1, x1, ..., xn]
 - Quadratic design matrices would look like this: (e.g. with 3 variables)
@@ -175,8 +177,8 @@ print "*"*45
 
 def alpha_deg_gridsearch(X_tr, y_tr, X_te, y_te):
 	folds = 5
-	alphas = np.arange(0, 50, 1)
-	degrees = [1,2,3,4]
+	alphas = np.arange(0, 25, 1)
+	degrees = [2,3,4]
 	results = []
 	labels_slices, features_slices = sfold(X_train, y_train, folds)
 	for deg in degrees: 
@@ -205,41 +207,39 @@ def alpha_deg_gridsearch(X_tr, y_tr, X_te, y_te):
 				crossvaltrain_labels = np.array(crossvaltrain_labels)
 
 				Mean, Covariance = computeBayesianMeanAndCovariance(crossvaltrain, crossvaltrain_labels, alpha, deg)
-				y_pred = predict(Mean, crossvaltest, deg, "poly")
 				y_pred_tr = predict(Mean, crossvaltrain, deg, "poly")
-
+				y_pred = predict(Mean, crossvaltest, deg, "poly")
 				#calculate Root Mean Square (RMS) for each variable selection
-				MSE_tr = calculateMSE(y_pred_train, y_tr)
-				MSE_te = calculateMSE(y_pred, y_te)
+				MSE_tr = calculateMSE(y_pred_tr, crossvaltrain_labels)
+				MSE_te = calculateMSE(y_pred, crossvaltest_labels)
 				
 				tr_temp += MSE_tr
 				te_temp += MSE_te
 			tr_temp = tr_temp / folds
-			te_temp = te_temp /folds
-			print "Degree = %s, alpha = %s,  av. train EMS = %.6f, av. test EMS = %.6f" %(deg, alpha, tr_temp, te_temp)
+			te_temp = te_temp / folds
+			print "Degree = %s, alpha = %s,  av. train MSE = %.6f, av. test MSE = %.6f" %(deg, alpha, tr_temp, te_temp)
 			results.append([tr_temp, te_temp, (deg, alpha)])
-	print results
-	print results[0]
-	resultsort = results.sort(key=operator.itemgetter(0)) #sort by test EMS - lowest first
-	bestalpha_deg = resultsort[0][-1]
-	train_MSE = resultsort[0][0]
-	test_MSE = resultsort[0][1]
-	print "Best (degree, alpha): %s, train EMS = %.6f, test EMS = %.6f " %(bestalpha_deg, train_EMS, test_EMS)
+
+	resultsort = results.sort(key=operator.itemgetter(1)) #sort by error - lowest first
+	print resultsort
+	bestdeg_alpha = results[0][-1]
+	train_MSE = results[0][0]
+	test_MSE = results[0][1]
+	print "Best (degree, alpha): %s, train MSE = %.6f, test MSE = %.6f " %(bestdeg_alpha, train_MSE, test_MSE)
 	return bestdeg_alpha
 
-print "-"
+print "-"*45
 print "Gridsearch to find best degree and alpha"
-print "-"
+print "-"*45
 
 deg_alpha = alpha_deg_gridsearch(X_train, y_train, X_test, y_test) 
 
-Mean, Covariance = computeBayesianMeanAndCovariance(X_train, y_train, deg_alpha[0], deg_alpha[1])
-y_pred_tr = predict(Mean, X_train)
-y_pred = predict(Mean, X_test)
+Mean, Covariance = computeBayesianMeanAndCovariance(X_train, y_train, 4.5, deg_alpha[0])
+y_pred_tr = predict(Mean, X_train, deg_alpha[0], "poly")
+y_pred = predict(Mean, X_test, deg_alpha[0], "poly")
 MSE_tr = calculateMSE(y_pred_tr, y_train)
 MSE_te = calculateMSE(y_pred, y_test)
 print "Trained on train set and evaluated on test set with best hyperparameter pair (degree, alpha), %s. Train MSE = %.6f. Test MSE = %.6f" %(deg_alpha, MSE_tr, MSE_te)
-
 """
 #Regression
 degrees = [1,2,3,4,5]

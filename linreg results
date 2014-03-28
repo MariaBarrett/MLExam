@@ -1,0 +1,91 @@
+*********************************************
+Linear regression
+*********************************************
+Bias: -8.14943349365
+MSE Trains 0.274754600685
+MSE Test 0.275179630629
+*********************************************
+Polynomial regression
+*********************************************
+---------------------------------------------
+Gridsearch to find best degree and alpha
+---------------------------------------------
+Degree = 2, alpha = 0,  av. train MSE = 0.165065, av. test MSE = 31.228552
+Degree = 2, alpha = 1,  av. train MSE = 0.165921, av. test MSE = 12.244762
+Degree = 2, alpha = 2,  av. train MSE = 0.167086, av. test MSE = 7.460852
+Degree = 2, alpha = 3,  av. train MSE = 0.168242, av. test MSE = 5.196177
+Degree = 2, alpha = 4,  av. train MSE = 0.169365, av. test MSE = 3.894000
+Degree = 2, alpha = 5,  av. train MSE = 0.170461, av. test MSE = 3.060052
+Degree = 2, alpha = 6,  av. train MSE = 0.171539, av. test MSE = 2.487449
+Degree = 2, alpha = 7,  av. train MSE = 0.172607, av. test MSE = 2.074593
+Degree = 2, alpha = 8,  av. train MSE = 0.173668, av. test MSE = 1.765932
+Degree = 2, alpha = 9,  av. train MSE = 0.174728, av. test MSE = 1.528630
+Degree = 2, alpha = 10,  av. train MSE = 0.175788, av. test MSE = 1.342092
+Degree = 2, alpha = 11,  av. train MSE = 0.176851, av. test MSE = 1.192783
+Degree = 2, alpha = 12,  av. train MSE = 0.177918, av. test MSE = 1.071464
+Degree = 2, alpha = 13,  av. train MSE = 0.178990, av. test MSE = 0.971632
+Degree = 2, alpha = 14,  av. train MSE = 0.180067, av. test MSE = 0.888585
+Degree = 2, alpha = 15,  av. train MSE = 0.181150, av. test MSE = 0.818851
+Degree = 2, alpha = 16,  av. train MSE = 0.182239, av. test MSE = 0.759813
+Degree = 2, alpha = 17,  av. train MSE = 0.183335, av. test MSE = 0.709468
+Degree = 2, alpha = 18,  av. train MSE = 0.184438, av. test MSE = 0.666260
+Degree = 2, alpha = 19,  av. train MSE = 0.185547, av. test MSE = 0.628964
+Degree = 2, alpha = 20,  av. train MSE = 0.186664, av. test MSE = 0.596607
+Degree = 2, alpha = 21,  av. train MSE = 0.187787, av. test MSE = 0.568404
+Degree = 2, alpha = 22,  av. train MSE = 0.188918, av. test MSE = 0.543719
+Degree = 2, alpha = 23,  av. train MSE = 0.190055, av. test MSE = 0.522033
+Degree = 2, alpha = 24,  av. train MSE = 0.191199, av. test MSE = 0.502915
+Degree = 3, alpha = 0,  av. train MSE = 0.156359, av. test MSE = 28.007844
+Degree = 3, alpha = 1,  av. train MSE = 0.157853, av. test MSE = 30.000502
+Degree = 3, alpha = 2,  av. train MSE = 0.159723, av. test MSE = 25.365001
+Degree = 3, alpha = 3,  av. train MSE = 0.161452, av. test MSE = 20.934624
+Degree = 3, alpha = 4,  av. train MSE = 0.163057, av. test MSE = 17.228252
+Degree = 3, alpha = 5,  av. train MSE = 0.164577, av. test MSE = 14.166646
+Degree = 3, alpha = 6,  av. train MSE = 0.166043, av. test MSE = 11.629337
+Degree = 3, alpha = 7,  av. train MSE = 0.167474, av. test MSE = 9.517318
+Degree = 3, alpha = 8,  av. train MSE = 0.168883, av. test MSE = 7.754307
+Degree = 3, alpha = 9,  av. train MSE = 0.170277, av. test MSE = 6.281176
+Degree = 3, alpha = 10,  av. train MSE = 0.171664, av. test MSE = 5.051199
+Degree = 3, alpha = 11,  av. train MSE = 0.173047, av. test MSE = 4.026729
+Degree = 3, alpha = 12,  av. train MSE = 0.174430, av. test MSE = 3.176929
+Degree = 3, alpha = 13,  av. train MSE = 0.175813, av. test MSE = 2.476211
+Degree = 3, alpha = 14,  av. train MSE = 0.177198, av. test MSE = 1.903117
+Degree = 3, alpha = 15,  av. train MSE = 0.178587, av. test MSE = 1.439510
+Degree = 3, alpha = 16,  av. train MSE = 0.179980, av. test MSE = 1.069960
+Degree = 3, alpha = 17,  av. train MSE = 0.181377, av. test MSE = 0.781271
+Degree = 3, alpha = 18,  av. train MSE = 0.182780, av. test MSE = 0.562115
+Degree = 3, alpha = 19,  av. train MSE = 0.184188, av. test MSE = 0.402729
+Degree = 3, alpha = 20,  av. train MSE = 0.185601, av. test MSE = 0.294679
+Degree = 3, alpha = 21,  av. train MSE = 0.187020, av. test MSE = 0.230661
+Degree = 3, alpha = 22,  av. train MSE = 0.188445, av. test MSE = 0.204335
+Degree = 3, alpha = 23,  av. train MSE = 0.189876, av. test MSE = 0.210193
+Degree = 3, alpha = 24,  av. train MSE = 0.191313, av. test MSE = 0.243439
+Degree = 4, alpha = 0,  av. train MSE = 0.160406, av. test MSE = 2942.887443
+Degree = 4, alpha = 1,  av. train MSE = 0.161788, av. test MSE = 2249.151454
+Degree = 4, alpha = 2,  av. train MSE = 0.163437, av. test MSE = 1875.430023
+Degree = 4, alpha = 3,  av. train MSE = 0.164975, av. test MSE = 1614.017255
+Degree = 4, alpha = 4,  av. train MSE = 0.166418, av. test MSE = 1411.399019
+Degree = 4, alpha = 5,  av. train MSE = 0.167795, av. test MSE = 1245.603296
+Degree = 4, alpha = 6,  av. train MSE = 0.169128, av. test MSE = 1105.532019
+Degree = 4, alpha = 7,  av. train MSE = 0.170433, av. test MSE = 984.774515
+Degree = 4, alpha = 8,  av. train MSE = 0.171721, av. test MSE = 879.251686
+Degree = 4, alpha = 9,  av. train MSE = 0.173001, av. test MSE = 786.171142
+Degree = 4, alpha = 10,  av. train MSE = 0.174276, av. test MSE = 703.510180
+Degree = 4, alpha = 11,  av. train MSE = 0.175552, av. test MSE = 629.737482
+Degree = 4, alpha = 12,  av. train MSE = 0.176830, av. test MSE = 563.652787
+Degree = 4, alpha = 13,  av. train MSE = 0.178113, av. test MSE = 504.289157
+Degree = 4, alpha = 14,  av. train MSE = 0.179402, av. test MSE = 450.850456
+Degree = 4, alpha = 15,  av. train MSE = 0.180698, av. test MSE = 402.669652
+Degree = 4, alpha = 16,  av. train MSE = 0.182002, av. test MSE = 359.179967
+Degree = 4, alpha = 17,  av. train MSE = 0.183313, av. test MSE = 319.894274
+Degree = 4, alpha = 18,  av. train MSE = 0.184633, av. test MSE = 284.389947
+Degree = 4, alpha = 19,  av. train MSE = 0.185961, av. test MSE = 252.297459
+Degree = 4, alpha = 20,  av. train MSE = 0.187297, av. test MSE = 223.291585
+Degree = 4, alpha = 21,  av. train MSE = 0.188642, av. test MSE = 197.084508
+Degree = 4, alpha = 22,  av. train MSE = 0.189996, av. test MSE = 173.420302
+Degree = 4, alpha = 23,  av. train MSE = 0.191357, av. test MSE = 152.070473
+Degree = 4, alpha = 24,  av. train MSE = 0.192727, av. test MSE = 132.830281
+None
+Best (degree, alpha): (3, 22), train MSE = 0.188445, test MSE = 0.204335 
+Trained on train set and evaluated on test set with best hyperparameter pair (degree, alpha), (3, 22). Train MSE = 0.163915. Test MSE = 0.180553
+
